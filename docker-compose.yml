@@ -1,0 +1,64 @@
+# ══════════════════════════════════════════════════════════
+#  docker-compose.yml  — Base config (Production / VPS)
+#
+#  Cách dùng:
+#    - Trên VPS (Jenkins deploy):
+#        docker compose -f docker-compose.yml --env-file .env up -d
+#    - Local dev: file này được merge tự động với docker-compose.override.yml
+#        docker compose up -d
+# ══════════════════════════════════════════════════════════
+
+version: '3.9'
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ondas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ondas-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Spring Boot Backend ─────────────────────────────────
+  ondas-be:
+    # Image được push lên Docker Hub bởi Jenkins.
+    # Thay "yourdockerhubusername" bằng username Docker Hub thực của bạn.
+    image: yourdockerhubusername/ondas-be:latest
+    container_name: ondas-be
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL:      jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_PROFILES_ACTIVE:     prod
+      JWT_SECRET:                 ${JWT_SECRET}
+      JWT_EXPIRATION:             ${JWT_EXPIRATION}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ondas-network
+
+# ── Volumes & Networks ────────────────────────────────────
+volumes:
+  postgres_data:
+    # Data PostgreSQL được giữ nguyên khi container restart/recreate
+
+networks:
+  ondas-network:
+    driver: bridge

@@ -1,0 +1,35 @@
+# Compiled output — không cần copy vào image, Dockerfile tự build
+target/
+
+# Git metadata
+.git/
+.gitignore
+.gitattributes
+
+# Maven wrapper JAR (được download tự động)
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+
+# Logs
+**/*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files không cần trong build context
+docker-compose*.yml
+Dockerfile*
+
+# Env files — KHÔNG BAO GIỜ đưa vào image
+.env
+.env.*

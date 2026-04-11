@@ -1,0 +1,49 @@
+# ══════════════════════════════════════════════════════════
+#  docker-compose.override.yml  — Local Development
+#
+#  File này được Docker Compose tự động merge vào docker-compose.yml
+#  khi chạy `docker compose up` mà KHÔNG chỉ định -f flag.
+#
+#  Trên VPS (Jenkins): KHÔNG dùng file này
+#  (Jenkins chạy: docker compose -f docker-compose.yml ... → bỏ qua override)
+#
+#  Có 2 cách dùng local:
+#    1. Chỉ chạy DB (app chạy từ IntelliJ / terminal):
+#         docker compose up -d postgres
+#         Rồi run Spring Boot từ IDE với profile "dev"
+#
+#    2. Chạy toàn bộ (app + DB trong Docker):
+#         docker compose up -d
+# ══════════════════════════════════════════════════════════
+
+version: '3.9'
+
+services:
+
+  # ── PostgreSQL (Dev) ────────────────────────────────────
+  # Override: dùng credentials cố định cho local, mở port ra host
+  # để dùng với DBeaver, IntelliJ Database, TablePlus, v.v.
+  postgres:
+    environment:
+      POSTGRES_DB:       ondas_dev
+      POSTGRES_USER:     ondas_user
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"     # Mở ra ngoài để IDE/tool kết nối trực tiếp
+
+  # ── Spring Boot (Dev) ───────────────────────────────────
+  # Override: build từ source thay vì pull image từ Docker Hub
+  ondas-be:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ondas-be:dev   # dùng tag :dev thay vì :latest để tránh nhầm với prod
+    environment:
+      # Kết nối tới postgres service cùng network
+      SPRING_DATASOURCE_URL:      jdbc:postgresql://postgres:5432/ondas_dev
+      SPRING_DATASOURCE_USERNAME: ondas_user
+      SPRING_DATASOURCE_PASSWORD: dev_password
+      SPRING_PROFILES_ACTIVE:     dev
+      # JWT dev — KHÔNG dùng trong production
+      JWT_SECRET:                 dev-only-secret-key-change-in-production
+      JWT_EXPIRATION:             86400000
