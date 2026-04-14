@@ -20,10 +20,22 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  flyway:
+    enabled: false
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 60MB
 
 jwt:
   secret: dev-only-secret-key-change-in-production
   expiration: 86400000
+
+app:
+  admin:
+    email: admin@ondas.local
+    password: admin123
 
 server:
   port: 8080
@@ -32,3 +44,11 @@ logging:
   level:
     com.example.ondas_be: DEBUG
     org.springframework.security: DEBUG
+
+storage:
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    public-url: ${MINIO_PUBLIC_URL:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:ondas_minio}
+    secret-key: ${MINIO_SECRET_KEY:ondas_minio_secret}
+    bucket: ${MINIO_BUCKET:ondas-media}
