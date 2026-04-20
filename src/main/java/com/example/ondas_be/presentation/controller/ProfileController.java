@@ -4,7 +4,7 @@ import com.example.ondas_be.application.dto.common.ApiResponse;
 import com.example.ondas_be.application.dto.request.ChangePasswordRequest;
 import com.example.ondas_be.application.dto.request.UpdateProfileRequest;
 import com.example.ondas_be.application.dto.response.UserProfileResponse;
-import com.example.ondas_be.application.service.port.UserServicePort;
+import com.example.ondas_be.application.service.port.ProfileServicePort;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,12 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ProfileController {
 
-    private final UserServicePort userServicePort;
+    private final ProfileServicePort profileServicePort;
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(
             @AuthenticationPrincipal UserDetails userDetails) {
-        UserProfileResponse response = userServicePort.getMyProfile(userDetails.getUsername());
+        UserProfileResponse response = profileServicePort.getMyProfile(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -34,7 +34,7 @@ public class ProfileController {
     public ResponseEntity<ApiResponse<UserProfileResponse>> updateMyProfile(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody UpdateProfileRequest request) {
-        UserProfileResponse response = userServicePort.updateMyProfile(userDetails.getUsername(), request);
+        UserProfileResponse response = profileServicePort.updateMyProfile(userDetails.getUsername(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -42,7 +42,7 @@ public class ProfileController {
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody ChangePasswordRequest request) {
-        userServicePort.changePassword(userDetails.getUsername(), request);
+        profileServicePort.changePassword(userDetails.getUsername(), request);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

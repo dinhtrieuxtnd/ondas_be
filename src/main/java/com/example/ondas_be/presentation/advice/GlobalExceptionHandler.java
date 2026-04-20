@@ -1,22 +1,29 @@
 package com.example.ondas_be.presentation.advice;
 
 import com.example.ondas_be.application.dto.common.ApiResponse;
+import com.example.ondas_be.application.exception.AlbumNotFoundException;
+import com.example.ondas_be.application.exception.ArtistNotFoundException;
 import com.example.ondas_be.application.exception.EmailAlreadyExistsException;
+import com.example.ondas_be.application.exception.GenreNotFoundException;
 import com.example.ondas_be.application.exception.InvalidCredentialsException;
 import com.example.ondas_be.application.exception.InvalidCurrentPasswordException;
 import com.example.ondas_be.application.exception.InvalidTokenException;
+import com.example.ondas_be.application.exception.SongNotFoundException;
+import com.example.ondas_be.application.exception.StorageOperationException;
 import com.example.ondas_be.application.exception.UserNotFoundException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
@@ -49,6 +56,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler({
+            SongNotFoundException.class,
+            ArtistNotFoundException.class,
+            AlbumNotFoundException.class,
+            GenreNotFoundException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult()
@@ -60,8 +77,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(message));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(StorageOperationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStorageError(StorageOperationException ex) {
+        log.error("Storage operation failed", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
+        log.error("Unhandled exception", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("Internal server error"));
     }
