@@ -8,6 +8,7 @@ env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/ondas-be
   DEPLOY_DIR: /opt/ondas-app
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ══════════════════════════════════════════════════════════
