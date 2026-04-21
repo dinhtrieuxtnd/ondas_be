@@ -15,7 +15,9 @@ jwt:
   expiration: 86400000
 
 storage:
-  endpoint: http://localhost:9000
-  access-key: minioadmin
-  secret-key: minioadmin
-  bucket-name: test-bucket
+  minio:
+    endpoint: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket-audio: test-audio
+    bucket-image: test-images
