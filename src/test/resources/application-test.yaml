@@ -13,6 +13,8 @@ spring:
 jwt:
   secret: test-secret-key-for-unit-tests-only-32chars!!
   expiration: 86400000
+  refresh-expiration: 604800000
+  password-reset-expiration: 60000
 
 storage:
   minio:
