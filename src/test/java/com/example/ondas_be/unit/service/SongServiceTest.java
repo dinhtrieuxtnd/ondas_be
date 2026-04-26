@@ -3,6 +3,8 @@ package com.example.ondas_be.unit.service;
 import com.example.ondas_be.application.dto.request.CreateSongRequest;
 import com.example.ondas_be.application.dto.request.UpdateSongRequest;
 import com.example.ondas_be.application.dto.response.SongResponse;
+import com.example.ondas_be.application.mapper.ArtistMapper;
+import com.example.ondas_be.application.mapper.GenreMapper;
 import com.example.ondas_be.application.mapper.SongMapper;
 import com.example.ondas_be.application.service.impl.SongService;
 import com.example.ondas_be.application.service.port.StoragePort;
@@ -63,6 +65,12 @@ class SongServiceTest {
 
     @Mock
     private SongMapper songMapper;
+
+    @Mock
+    private ArtistMapper artistMapper;
+
+    @Mock
+    private GenreMapper genreMapper;
 
     @InjectMocks
     private SongService songService;
@@ -130,6 +138,8 @@ class SongServiceTest {
             );
         });
         when(songMapper.toResponse(any(Song.class))).thenReturn(new SongResponse());
+        when(artistMapper.toSummaryResponseList(any())).thenReturn(List.of());
+        when(genreMapper.toSummaryResponseList(any())).thenReturn(List.of());
 
         songService.createSong(request, audioFile, coverFile);
 
@@ -212,6 +222,8 @@ class SongServiceTest {
         when(storagePort.extractObjectName(eq("ondas-images"), eq("old-cover-url"))).thenReturn("old.jpg");
         when(songRepoPort.save(any(Song.class))).thenReturn(existing);
         when(songMapper.toResponse(any(Song.class))).thenReturn(new SongResponse());
+        when(artistMapper.toSummaryResponseList(any())).thenReturn(List.of());
+        when(genreMapper.toSummaryResponseList(any())).thenReturn(List.of());
 
         songService.updateSong(songId, request, audioFile, coverFile);
 

@@ -41,4 +41,6 @@ public interface SongRepoPort {
     void deleteById(UUID id);
 
     boolean existsBySlug(String slug);
+
+    void incrementPlayCount(UUID id);
 }

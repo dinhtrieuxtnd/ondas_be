@@ -4,6 +4,7 @@ import com.example.ondas_be.application.dto.request.CreateSongRequest;
 import com.example.ondas_be.application.dto.request.SongFilterRequest;
 import com.example.ondas_be.application.dto.request.UpdateSongRequest;
 import com.example.ondas_be.application.dto.response.SongResponse;
+import com.example.ondas_be.application.dto.response.SongStreamResponse;
 import com.example.ondas_be.application.dto.common.PageResultDto;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,4 +21,14 @@ public interface SongServicePort {
     PageResultDto<SongResponse> getSongs(SongFilterRequest filter);
 
     void deleteSong(UUID id);
+
+    /**
+     * Streams audio bytes for a song, honouring the HTTP Range header.
+     * Increments the play count when the range starts at byte 0.
+     *
+     * @param id          song identifier
+     * @param rangeHeader value of the {@code Range} HTTP header (may be null)
+     * @return streaming metadata and the open InputStream
+     */
+    SongStreamResponse streamSong(UUID id, String rangeHeader);
 }

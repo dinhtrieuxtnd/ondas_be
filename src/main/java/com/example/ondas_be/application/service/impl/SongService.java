@@ -6,6 +6,7 @@ import com.example.ondas_be.application.dto.request.UpdateSongRequest;
 import com.example.ondas_be.application.dto.response.ArtistSummaryResponse;
 import com.example.ondas_be.application.dto.response.GenreSummaryResponse;
 import com.example.ondas_be.application.dto.response.SongResponse;
+import com.example.ondas_be.application.dto.response.SongStreamResponse;
 import com.example.ondas_be.application.dto.common.PageResultDto;
 import com.example.ondas_be.application.exception.AlbumNotFoundException;
 import com.example.ondas_be.application.exception.ArtistNotFoundException;
@@ -411,5 +412,80 @@ public class SongService implements SongServicePort {
                 .totalElements(total)
                 .totalPages(totalPages)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public SongStreamResponse streamSong(UUID id, String rangeHeader) {
+        log.info("Streaming song with id: {}, range: {}", id, rangeHeader);
+        Song song = songRepoPort.findById(id)
+                .orElseThrow(() -> new SongNotFoundException("Song not found with id: " + id));
+
+        if (!song.isActive()) {
+            throw new SongNotFoundException("Song not found with id: " + id);
+        }
+
+        String objectName = storagePort.extractObjectName(audioBucket, song.getAudioUrl());
+        long totalSize = song.getAudioSizeBytes() != null ? song.getAudioSizeBytes() : -1L;
+        String contentType = resolveContentType(song.getAudioFormat());
+
+        // Khi không biết tổng kích thước, không hỗ trợ Range — trả về full stream
+        if (totalSize <= 0) {
+            if (rangeHeader == null || rangeHeader.isBlank()) {
+                songRepoPort.incrementPlayCount(id);
+            }
+            return new SongStreamResponse(
+                    storagePort.getObjectStream(audioBucket, objectName, 0, -1),
+                    -1, 0, -1, contentType, false
+            );
+        }
+
+        long rangeStart = 0;
+        long rangeEnd = totalSize - 1;
+        boolean isPartial = false;
+
+        if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+            String range = rangeHeader.substring("bytes=".length());
+            String[] parts = range.split("-", 2);
+            try {
+                rangeStart = parts[0].isBlank() ? 0 : Long.parseLong(parts[0].trim());
+                rangeEnd = (parts.length > 1 && !parts[1].isBlank())
+                        ? Long.parseLong(parts[1].trim())
+                        : totalSize - 1;
+            } catch (NumberFormatException e) {
+                // Range header không hợp lệ → phục vụ toàn bộ file
+                rangeStart = 0;
+                rangeEnd = totalSize - 1;
+            }
+            // Giới hạn trong phạm vi file
+            rangeStart = Math.max(0, Math.min(rangeStart, totalSize - 1));
+            rangeEnd = Math.max(rangeStart, Math.min(rangeEnd, totalSize - 1));
+            isPartial = true;
+        }
+
+        // Tăng playCount chỉ khi bắt đầu từ đầu file (lần nghe mới)
+        if (rangeStart == 0) {
+            songRepoPort.incrementPlayCount(id);
+        }
+
+        long length = rangeEnd - rangeStart + 1;
+        return new SongStreamResponse(
+                storagePort.getObjectStream(audioBucket, objectName, rangeStart, length),
+                totalSize, rangeStart, rangeEnd, contentType, isPartial
+        );
+    }
+
+    private String resolveContentType(String audioFormat) {
+        if (audioFormat == null) return "application/octet-stream";
+        return switch (audioFormat.toLowerCase()) {
+            case "mp3"  -> "audio/mpeg";
+            case "flac" -> "audio/flac";
+            case "ogg"  -> "audio/ogg";
+            case "wav"  -> "audio/wav";
+            case "aac"  -> "audio/aac";
+            case "m4a"  -> "audio/mp4";
+            case "opus" -> "audio/opus";
+            default     -> "application/octet-stream";
+        };
     }
 }

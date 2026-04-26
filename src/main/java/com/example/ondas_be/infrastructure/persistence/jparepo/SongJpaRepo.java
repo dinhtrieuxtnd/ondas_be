@@ -4,6 +4,7 @@ import com.example.ondas_be.infrastructure.persistence.model.SongModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -48,4 +49,8 @@ public interface SongJpaRepo extends JpaRepository<SongModel, UUID> {
             @Query(value = "select count(*) from songs s where to_tsvector('simple', s.title) @@ plainto_tsquery('simple', :query)",
                 nativeQuery = true)
             long countByTitleFullText(@Param("query") String query);
+
+    @Modifying
+    @Query("UPDATE SongModel s SET s.playCount = s.playCount + 1 WHERE s.id = :id")
+    void incrementPlayCount(@Param("id") UUID id);
 }

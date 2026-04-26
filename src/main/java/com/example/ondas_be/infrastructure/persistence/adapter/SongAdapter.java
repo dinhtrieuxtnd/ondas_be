@@ -7,6 +7,7 @@ import com.example.ondas_be.infrastructure.persistence.model.SongModel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -111,5 +112,11 @@ public class SongAdapter implements SongRepoPort {
     @Override
     public boolean existsBySlug(String slug) {
         return songJpaRepo.existsBySlug(slug);
+    }
+
+    @Override
+    @Transactional
+    public void incrementPlayCount(UUID id) {
+        songJpaRepo.incrementPlayCount(id);
     }
 }

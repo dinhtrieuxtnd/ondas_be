@@ -2,10 +2,12 @@ package com.example.ondas_be.infrastructure.storage;
 
 import com.example.ondas_be.application.service.port.StoragePort;
 import io.minio.BucketExistsArgs;
+import io.minio.GetObjectArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
+import io.minio.SetBucketPolicyArgs;
 import io.minio.StatObjectArgs;
 import io.minio.errors.ErrorResponseException;
 import io.minio.errors.InsufficientDataException;
@@ -100,11 +102,42 @@ public class MinioStorageAdapter implements StoragePort {
         }
     }
 
+    @Override
+    public InputStream getObjectStream(String bucket, String objectName, long offset, long length) {
+        try {
+            GetObjectArgs.Builder builder = GetObjectArgs.builder()
+                    .bucket(bucket)
+                    .object(objectName)
+                    .offset(offset);
+            if (length > 0) {
+                builder.length(length);
+            }
+            return minioClient.getObject(builder.build());
+        } catch (IOException | InvalidKeyException | InvalidResponseException | InsufficientDataException
+                 | NoSuchAlgorithmException | ServerException | XmlParserException | ErrorResponseException
+                 | InternalException ex) {
+            throw new IllegalStateException("Failed to stream object from storage", ex);
+        }
+    }
+
     private void ensureBucketExists(String bucket) {
         try {
             boolean exists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
             if (!exists) {
                 minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
+                String publicReadPolicy = """
+                        {
+                          "Version": "2012-10-17",
+                          "Statement": [{
+                            "Effect": "Allow",
+                            "Principal": {"AWS": ["*"]},
+                            "Action": ["s3:GetObject"],
+                            "Resource": ["arn:aws:s3:::%s/*"]
+                          }]
+                        }""".formatted(bucket);
+                minioClient.setBucketPolicy(
+                        SetBucketPolicyArgs.builder().bucket(bucket).config(publicReadPolicy).build()
+                );
             }
         } catch (IOException | InvalidKeyException | InvalidResponseException | InsufficientDataException
                  | NoSuchAlgorithmException | ServerException | XmlParserException | ErrorResponseException

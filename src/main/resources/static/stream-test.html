@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stream Test — Ondas</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f13;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: #1a1a24;
+      border: 1px solid #2e2e40;
+      border-radius: 16px;
+      padding: 32px;
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    h1 { font-size: 1.3rem; color: #a78bfa; font-weight: 600; }
+
+    label { font-size: 0.78rem; color: #888; margin-bottom: 6px; display: block; }
+    input, textarea {
+      width: 100%;
+      background: #111118;
+      border: 1px solid #2e2e40;
+      border-radius: 8px;
+      color: #e0e0e0;
+      padding: 10px 14px;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    input:focus, textarea:focus { border-color: #7c3aed; }
+    textarea { resize: vertical; min-height: 72px; font-family: monospace; font-size: 0.78rem; }
+
+    .row { display: flex; gap: 12px; }
+    .row > * { flex: 1; }
+
+    button {
+      padding: 11px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #7c3aed; color: #fff; }
+    .btn-secondary { background: #2e2e40; color: #ccc; }
+
+    audio { width: 100%; border-radius: 8px; accent-color: #7c3aed; }
+
+    .log {
+      background: #111118;
+      border: 1px solid #2e2e40;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: monospace;
+      font-size: 0.78rem;
+      line-height: 1.6;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .log-entry { margin-bottom: 2px; }
+    .log-entry.ok  { color: #4ade80; }
+    .log-entry.err { color: #f87171; }
+    .log-entry.inf { color: #60a5fa; }
+    .log-entry.warn{ color: #facc15; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-weight: 600;
+    }
+    .badge-200 { background: #14532d; color: #4ade80; }
+    .badge-206 { background: #1e3a5f; color: #60a5fa; }
+    .badge-401 { background: #4c1d1d; color: #f87171; }
+    .badge-404 { background: #4c1d1d; color: #f87171; }
+
+    hr { border: none; border-top: 1px solid #2e2e40; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🎵 Ondas — Stream Test</h1>
+  <hr/>
+
+  <div>
+    <label>Base URL</label>
+    <input id="baseUrl" value="http://localhost:8080" placeholder="http://localhost:8080"/>
+  </div>
+
+  <div>
+    <label>JWT Token (không cần "Bearer ")</label>
+    <textarea id="token" placeholder="eyJhbGciOiJIUzI1NiJ9..."></textarea>
+  </div>
+
+  <div>
+    <label>Song ID (UUID)</label>
+    <input id="songId" placeholder="550e8400-e29b-41d4-a716-446655440000"/>
+  </div>
+
+  <div>
+    <label>Chunk size (KB) <span style="color:#555">— mỗi Range request tải bao nhiêu KB</span></label>
+    <input id="chunkSize" type="number" value="256" min="64" max="2048"/>
+  </div>
+
+  <div class="row">
+    <button class="btn-primary" id="btnLoad" onclick="startMSE()">▶ Stream &amp; Play</button>
+    <button class="btn-secondary" onclick="stopStream()">⏹ Stop</button>
+    <button class="btn-secondary" onclick="testHeaders()">🔍 Test Headers</button>
+    <button class="btn-secondary" onclick="clearLog()">🗑 Clear</button>
+  </div>
+
+  <audio id="player" controls style="display:none"></audio>
+
+  <div id="progress-bar" style="display:none; background:#111118; border-radius:8px; overflow:hidden; height:6px;">
+    <div id="progress-fill" style="height:100%; background:#7c3aed; width:0%; transition:width 0.3s;"></div>
+  </div>
+
+  <div>
+    <label>Response Log</label>
+    <div class="log" id="log"><span style="color:#555">Chưa có request nào...</span></div>
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  // ── State ──────────────────────────────────────────────
+  let mediaSource = null;
+  let sourceBuffer = null;
+  let offset = 0;
+  let totalSize = -1;
+  let isFetching = false;
+  let stopped = false;
+  const BUFFER_AHEAD_SEC = 15; // giây buffer trước mặc định
+
+  function log(msg, type = 'inf') {
+    const el = $('log');
+    if (el.querySelector('span[style]')) el.innerHTML = '';
+    const d = document.createElement('div');
+    d.className = `log-entry ${type}`;
+    d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    el.appendChild(d);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function clearLog() {
+    $('log').innerHTML = '<span style="color:#555">Chưa có request nào...</span>';
+  }
+
+  function buildUrl() {
+    const base   = $('baseUrl').value.trim().replace(/\/$/, '');
+    const songId = $('songId').value.trim();
+    return `${base}/api/songs/${songId}/stream`;
+  }
+
+  function buildAuthHeaders(extraHeaders = {}) {
+    const token = $('token').value.trim();
+    const headers = { ...extraHeaders };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  }
+
+  // ── Stop ───────────────────────────────────────────────
+  function stopStream() {
+    stopped = true;
+    const player = $('player');
+    player.pause();
+    if (mediaSource && mediaSource.readyState === 'open') {
+      try { mediaSource.endOfStream(); } catch (_) {}
+    }
+    if (player.src?.startsWith('blob:')) {
+      URL.revokeObjectURL(player.src);
+      player.src = '';
+    }
+    player.style.display = 'none';
+    $('progress-bar').style.display = 'none';
+    log('Stream stopped.', 'warn');
+  }
+
+  // ── Fetch one chunk ────────────────────────────────────
+  async function fetchChunk() {
+    if (stopped || isFetching) return;
+    if (totalSize > 0 && offset >= totalSize) {
+      log('✓ Đã tải hết file.', 'ok');
+      if (mediaSource?.readyState === 'open') mediaSource.endOfStream();
+      return;
+    }
+
+    isFetching = true;
+    const chunkBytes = parseInt($('chunkSize').value || '256') * 1024;
+    const end = totalSize > 0
+      ? Math.min(offset + chunkBytes - 1, totalSize - 1)
+      : offset + chunkBytes - 1;
+
+    const url = buildUrl();
+    log(`→ GET chunk bytes=${offset}-${end}`, 'inf');
+
+    try {
+      const res = await fetch(url, {
+        headers: buildAuthHeaders({ Range: `bytes=${offset}-${end}` })
+      });
+
+      if (!res.ok) {
+        const body = await res.text();
+        log(`✗ ${res.status} ${res.statusText}: ${body}`, 'err');
+        if (mediaSource?.readyState === 'open') mediaSource.endOfStream('network');
+        isFetching = false;
+        return;
+      }
+
+      // Lấy tổng size từ Content-Range header lần đầu
+      if (totalSize < 0) {
+        const cr = res.headers.get('Content-Range');
+        if (cr) {
+          const match = cr.match(/\/(\d+)$/);
+          if (match) {
+            totalSize = parseInt(match[1]);
+            log(`Total size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`, 'inf');
+          }
+        }
+      }
+
+      const buf = await res.arrayBuffer();
+      offset += buf.byteLength;
+      log(`← ${res.status} chunk ${(buf.byteLength / 1024).toFixed(1)} KB | offset: ${(offset / 1024).toFixed(0)} KB`, 'ok');
+
+      // Update progress bar
+      if (totalSize > 0) {
+        $('progress-fill').style.width = `${Math.min(100, (offset / totalSize) * 100).toFixed(1)}%`;
+      }
+
+      // Append to SourceBuffer
+      if (!stopped && sourceBuffer && !sourceBuffer.updating) {
+        sourceBuffer.appendBuffer(buf);
+      }
+    } catch (e) {
+      log(`✗ Lỗi kết nối: ${e.message}`, 'err');
+    } finally {
+      isFetching = false;
+    }
+  }
+
+  // ── MSE streaming ──────────────────────────────────────
+  async function startMSE() {
+    stopStream();
+    stopped = false;
+    offset = 0;
+    totalSize = -1;
+
+    const url = buildUrl();
+
+    // Kiểm tra MSE support
+    if (!window.MediaSource) {
+      log('✗ Browser không hỗ trợ MediaSource API, dùng fallback blob...', 'warn');
+      await loadStreamBlob();
+      return;
+    }
+
+    // Xác định MIME type từ audioFormat (probe bằng HEAD-like GET với abort)
+    let mimeType = 'audio/mpeg'; // default mp3
+    try {
+      const ctrl = new AbortController();
+      const probe = await fetch(url, {
+        headers: buildAuthHeaders({ Range: 'bytes=0-0' }),
+        signal: ctrl.signal
+      });
+      ctrl.abort();
+      const ct = probe.headers.get('Content-Type') || '';
+      if (ct) mimeType = ct.split(';')[0].trim();
+    } catch (_) {}
+
+    if (!MediaSource.isTypeSupported(mimeType)) {
+      log(`⚠ ${mimeType} không được MSE hỗ trợ trong browser này, dùng blob fallback...`, 'warn');
+      await loadStreamBlob();
+      return;
+    }
+
+    log(`▶ Bắt đầu MSE stream | MIME: ${mimeType}`, 'inf');
+
+    mediaSource = new MediaSource();
+    const player = $('player');
+    player.src = URL.createObjectURL(mediaSource);
+    player.style.display = 'block';
+    $('progress-bar').style.display = 'block';
+
+    mediaSource.addEventListener('sourceopen', () => {
+      sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+
+      // Fetch chunk tiếp theo khi SourceBuffer xong
+      sourceBuffer.addEventListener('updateend', () => {
+        if (stopped) return;
+        // Tiếp tục fetch nếu buffer phía trước player < BUFFER_AHEAD_SEC giây
+        const bufferedAhead = getBufferedAhead(player);
+        if (bufferedAhead < BUFFER_AHEAD_SEC) {
+          fetchChunk();
+        }
+      });
+
+      // Fetch chunk đầu tiên
+      fetchChunk();
+    });
+
+    // Khi player gần hết buffer, fetch thêm
+    player.addEventListener('timeupdate', () => {
+      if (stopped || isFetching) return;
+      const bufferedAhead = getBufferedAhead(player);
+      if (bufferedAhead < BUFFER_AHEAD_SEC) {
+        fetchChunk();
+      }
+    });
+
+    player.play().catch(() => log('Autoplay bị chặn — nhấn Play trên player', 'warn'));
+  }
+
+  function getBufferedAhead(player) {
+    const buffered = player.buffered;
+    const ct = player.currentTime;
+    for (let i = 0; i < buffered.length; i++) {
+      if (buffered.start(i) <= ct && ct <= buffered.end(i)) {
+        return buffered.end(i) - ct;
+      }
+    }
+    return 0;
+  }
+
+  // ── Fallback: tải toàn bộ file về blob ────────────────
+  async function loadStreamBlob() {
+    const url = buildUrl();
+    log(`→ GET ${url} (full blob fallback)`, 'inf');
+    try {
+      const res = await fetch(url, { headers: buildAuthHeaders() });
+      if (!res.ok) {
+        log(`✗ ${res.status} ${res.statusText}`, 'err');
+        return;
+      }
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const player = $('player');
+      player.src = blobUrl;
+      player.style.display = 'block';
+      player.play().catch(() => log('Autoplay bị chặn', 'warn'));
+      log(`✓ Blob loaded: ${(blob.size / 1024 / 1024).toFixed(2)} MB`, 'ok');
+    } catch (e) {
+      log(`✗ ${e.message}`, 'err');
+    }
+  }
+
+  // ── Test headers only ──────────────────────────────────
+  async function testHeaders() {
+    const url = buildUrl();
+    const chunkBytes = parseInt($('chunkSize').value || '256') * 1024;
+    log(`→ GET ${url} (headers only, Range: bytes=0-${chunkBytes - 1})`, 'inf');
+    try {
+      const ctrl = new AbortController();
+      const res = await fetch(url, {
+        headers: buildAuthHeaders({ Range: `bytes=0-${chunkBytes - 1}` }),
+        signal: ctrl.signal
+      });
+      ctrl.abort();
+      log(`← ${res.status} ${res.statusText}`, res.ok ? 'ok' : 'err');
+      [['Content-Type', res.headers.get('Content-Type')],
+       ['Content-Length', res.headers.get('Content-Length')],
+       ['Content-Range', res.headers.get('Content-Range')],
+       ['Accept-Ranges', res.headers.get('Accept-Ranges')]
+      ].forEach(([k, v]) => { if (v) log(`   ${k}: ${v}`, 'inf'); });
+    } catch (e) {
+      if (e.name !== 'AbortError') log(`✗ ${e.message}`, 'err');
+    }
+  }
+</script>
+</body>
+</html>

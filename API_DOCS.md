@@ -276,14 +276,29 @@ Cập nhật thông tin profile.
 | Field | Type | Bắt buộc | Mô tả |
 |---|---|---|---|
 | `displayName` | string | ✅ | 1–50 ký tự |
-| `avatarUrl` | string | ❌ | URL ảnh đại diện, `null` giữ nguyên |
 
 ```json
 {
-  "displayName": "Nguyen Van B",
-  "avatarUrl": "https://example.com/avatar.jpg"
+  "displayName": "Nguyen Van B"
 }
 ```
+
+**Response `200 OK`:** Trả về `UserProfileResponse` đã cập nhật.
+
+---
+
+### PATCH `/api/profile/avatar`
+
+Cập nhật ảnh đại diện.
+
+**Auth:** ✅ Yêu cầu (JWT)
+
+**Content-Type:** `multipart/form-data`
+
+**Parts:**
+| Part | Type | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `avatar` | File | ✅ | File ảnh đại diện mới |
 
 **Response `200 OK`:** Trả về `UserProfileResponse` đã cập nhật.
 

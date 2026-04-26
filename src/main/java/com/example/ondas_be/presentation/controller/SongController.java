@@ -6,9 +6,12 @@ import com.example.ondas_be.application.dto.request.CreateSongRequest;
 import com.example.ondas_be.application.dto.request.SongFilterRequest;
 import com.example.ondas_be.application.dto.request.UpdateSongRequest;
 import com.example.ondas_be.application.dto.response.SongResponse;
+import com.example.ondas_be.application.dto.response.SongStreamResponse;
 import com.example.ondas_be.application.service.port.SongServicePort;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -70,5 +74,32 @@ public class SongController {
     public ResponseEntity<ApiResponse<Void>> deleteSong(@PathVariable UUID id) {
         songServicePort.deleteSong(id);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/{id}/stream")
+    public ResponseEntity<InputStreamResource> streamSong(
+            @PathVariable UUID id,
+            @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader) {
+
+        SongStreamResponse stream = songServicePort.streamSong(id, rangeHeader);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.set(HttpHeaders.ACCEPT_RANGES, "bytes");
+        headers.setContentType(MediaType.parseMediaType(stream.contentType()));
+        if (stream.totalSize() > 0) {
+            headers.setContentLength(stream.rangeEnd() - stream.rangeStart() + 1);
+        }
+
+        if (stream.isPartial()) {
+            headers.set(HttpHeaders.CONTENT_RANGE,
+                    "bytes " + stream.rangeStart() + "-" + stream.rangeEnd() + "/" + stream.totalSize());
+            return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                    .headers(headers)
+                    .body(new InputStreamResource(stream.audioStream()));
+        }
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(new InputStreamResource(stream.audioStream()));
     }
 }
