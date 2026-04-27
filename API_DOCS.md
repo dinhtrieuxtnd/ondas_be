@@ -15,6 +15,7 @@
 - [Albums](#albums)
 - [Artists](#artists)
 - [Genres](#genres)
+- [Play History](#play-history)
 - [Phân quyền](#phân-quyền)
 - [Mã lỗi thường gặp](#mã-lỗi-thường-gặp)
 
@@ -800,6 +801,135 @@ Xóa thể loại.
 ```json
 { "success": true, "message": "OK", "data": null }
 ```
+
+---
+
+## Play History
+
+> **Lưu ý:** `play_count` của bài hát tăng khi gọi `POST /api/play-history` thành công. Client nên gọi API này sau khi user nghe được ≥ 30 giây để tránh tính lượt nghe không hợp lệ.
+
+### POST `/api/play-history`
+
+Ghi lại lượt nghe nhạc.
+
+**Auth:** ✅ Yêu cầu (JWT)
+
+**Request Body:**
+| Field | Type | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `songId` | UUID | ✅ | ID bài hát đã nghe |
+| `durationPlayedSeconds` | integer | ❌ | Số giây đã nghe trong lượt này |
+| `completed` | boolean | ❌ | Nghe hết bài hay chưa (mặc định `false`) |
+| `source` | string | ❌ | Nguồn nghe: `search`, `album`, `playlist`, `home`, `artist`, `favorites`, `history` |
+
+```json
+{
+  "songId": "uuid",
+  "durationPlayedSeconds": 210,
+  "completed": true,
+  "source": "home"
+}
+```
+
+**Response `201 Created`:**
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "id": 1,
+    "song": {
+      "id": "uuid",
+      "title": "Nơi Này Có Anh",
+      "coverUrl": "https://...",
+      "durationSeconds": 210,
+      "audioUrl": "https://..."
+    },
+    "playedAt": "2026-04-27T15:30:00",
+    "durationPlayedSeconds": 210,
+    "completed": true,
+    "source": "home"
+  }
+}
+```
+
+---
+
+### GET `/api/play-history`
+
+Lấy lịch sử nghe nhạc của user đang đăng nhập, sắp xếp theo thời gian mới nhất.
+
+**Auth:** ✅ Yêu cầu (JWT)
+
+**Query Params:**
+| Param | Type | Bắt buộc | Mặc định | Mô tả |
+|---|---|---|---|---|
+| `page` | integer | ❌ | `0` | Trang (0-based) |
+| `size` | integer | ❌ | `20` | Số phần tử mỗi trang |
+
+**Response `200 OK`:** Trả về `PageResultDto<PlayHistoryResponse>`.
+
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "items": [
+      {
+        "id": 1,
+        "song": {
+          "id": "uuid",
+          "title": "Nơi Này Có Anh",
+          "coverUrl": "https://...",
+          "durationSeconds": 210,
+          "audioUrl": "https://..."
+        },
+        "playedAt": "2026-04-27T15:30:00",
+        "durationPlayedSeconds": 210,
+        "completed": true,
+        "source": "home"
+      }
+    ],
+    "page": 0,
+    "size": 20,
+    "totalElements": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+### DELETE `/api/play-history`
+
+Xóa toàn bộ lịch sử nghe nhạc của user đang đăng nhập.
+
+**Auth:** ✅ Yêu cầu (JWT)
+
+**Response `200 OK`:**
+```json
+{ "success": true, "message": "OK", "data": null }
+```
+
+---
+
+### DELETE `/api/play-history/{id}`
+
+Xóa một mục lịch sử cụ thể. Chỉ xóa được mục thuộc về user đang đăng nhập.
+
+**Auth:** ✅ Yêu cầu (JWT)
+
+**Path Params:**
+| Param | Type | Mô tả |
+|---|---|---|
+| `id` | Long | ID của mục lịch sử |
+
+**Response `200 OK`:**
+```json
+{ "success": true, "message": "OK", "data": null }
+```
+
+**Response `404 Not Found`:** Nếu mục không tồn tại hoặc không thuộc user hiện tại.
 
 ---
 
