@@ -119,4 +119,9 @@ public class SongAdapter implements SongRepoPort {
     public void incrementPlayCount(UUID id) {
         songJpaRepo.incrementPlayCount(id);
     }
+
+    @Override
+    public List<Song> findByIds(List<UUID> ids) {
+        return songJpaRepo.findByIdIn(ids).stream().map(SongModel::toDomain).toList();
+    }
 }

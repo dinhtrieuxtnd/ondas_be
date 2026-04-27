@@ -8,6 +8,7 @@ import com.example.ondas_be.application.exception.GenreNotFoundException;
 import com.example.ondas_be.application.exception.InvalidCredentialsException;
 import com.example.ondas_be.application.exception.InvalidCurrentPasswordException;
 import com.example.ondas_be.application.exception.InvalidTokenException;
+import com.example.ondas_be.application.exception.PlayHistoryNotFoundException;
 import com.example.ondas_be.application.exception.SongNotFoundException;
 import com.example.ondas_be.application.exception.StorageOperationException;
 import com.example.ondas_be.application.exception.UserNotFoundException;
@@ -60,7 +61,8 @@ public class GlobalExceptionHandler {
             SongNotFoundException.class,
             ArtistNotFoundException.class,
             AlbumNotFoundException.class,
-            GenreNotFoundException.class
+            GenreNotFoundException.class,
+            PlayHistoryNotFoundException.class
     })
     public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));

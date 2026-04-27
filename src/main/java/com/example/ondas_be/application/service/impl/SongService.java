@@ -431,9 +431,6 @@ public class SongService implements SongServicePort {
 
         // Khi không biết tổng kích thước, không hỗ trợ Range — trả về full stream
         if (totalSize <= 0) {
-            if (rangeHeader == null || rangeHeader.isBlank()) {
-                songRepoPort.incrementPlayCount(id);
-            }
             return new SongStreamResponse(
                     storagePort.getObjectStream(audioBucket, objectName, 0, -1),
                     -1, 0, -1, contentType, false
@@ -461,11 +458,6 @@ public class SongService implements SongServicePort {
             rangeStart = Math.max(0, Math.min(rangeStart, totalSize - 1));
             rangeEnd = Math.max(rangeStart, Math.min(rangeEnd, totalSize - 1));
             isPartial = true;
-        }
-
-        // Tăng playCount chỉ khi bắt đầu từ đầu file (lần nghe mới)
-        if (rangeStart == 0) {
-            songRepoPort.incrementPlayCount(id);
         }
 
         long length = rangeEnd - rangeStart + 1;

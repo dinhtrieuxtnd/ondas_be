@@ -53,4 +53,6 @@ public interface SongJpaRepo extends JpaRepository<SongModel, UUID> {
     @Modifying
     @Query("UPDATE SongModel s SET s.playCount = s.playCount + 1 WHERE s.id = :id")
     void incrementPlayCount(@Param("id") UUID id);
+
+    List<SongModel> findByIdIn(List<UUID> ids);
 }
