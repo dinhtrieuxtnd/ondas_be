@@ -37,3 +37,5 @@ build/
 ### VS Code ###
 .vscode/
 schema.sql
+
+STREAM_API.md

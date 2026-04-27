@@ -685,6 +685,33 @@ Xóa bài hát.
 
 ---
 
+### GET `/api/songs/{id}/stream`
+
+Stream audio bài hát. Tự động ghi lịch sử nghe và tăng `play_count` ở chunk đầu tiên (`bytes=0-...`).
+
+**Auth:** ✅ Yêu cầu (JWT)
+
+**Path Params:**
+| Param | Type | Mô tả |
+|---|---|---|
+| `id` | UUID | ID bài hát |
+
+**Query Params:**
+| Param | Type | Bắt buộc | Mô tả |
+|---|---|---|---|
+| `source` | string | ❌ | Nguồn nghe: `search`, `album`, `playlist`, `home`, `artist`, `favorites`, `history` |
+
+**Request Headers:**
+| Header | Bắt buộc | Mô tả |
+|---|---|---|
+| `Range` | ❌ | Byte range, ví dụ: `bytes=0-65535` |
+
+**Response `200 OK`:** Toàn bộ file audio (không có `Range` header).
+
+**Response `206 Partial Content`:** Đoạn audio theo Range request (có `Content-Range` header).
+
+---
+
 ## Albums
 
 ### POST `/api/albums`
@@ -1093,54 +1120,7 @@ GET /api/home?trendingLimit=5&artistLimit=6&albumLimit=8 → custom limit
 
 ## Play History
 
-> **Lưu ý:** `play_count` của bài hát tăng khi gọi `POST /api/play-history` thành công. Client nên gọi API này sau khi user nghe được ≥ 30 giây để tránh tính lượt nghe không hợp lệ.
-
-### POST `/api/play-history`
-
-Ghi lại lượt nghe nhạc.
-
-**Auth:** ✅ Yêu cầu (JWT)
-
-**Request Body:**
-| Field | Type | Bắt buộc | Mô tả |
-|---|---|---|---|
-| `songId` | UUID | ✅ | ID bài hát đã nghe |
-| `durationPlayedSeconds` | integer | ❌ | Số giây đã nghe trong lượt này |
-| `completed` | boolean | ❌ | Nghe hết bài hay chưa (mặc định `false`) |
-| `source` | string | ❌ | Nguồn nghe: `search`, `album`, `playlist`, `home`, `artist`, `favorites`, `history` |
-
-```json
-{
-  "songId": "uuid",
-  "durationPlayedSeconds": 210,
-  "completed": true,
-  "source": "home"
-}
-```
-
-**Response `201 Created`:**
-```json
-{
-  "success": true,
-  "message": "OK",
-  "data": {
-    "id": 1,
-    "song": {
-      "id": "uuid",
-      "title": "Nơi Này Có Anh",
-      "coverUrl": "https://...",
-      "durationSeconds": 210,
-      "audioUrl": "https://..."
-    },
-    "playedAt": "2026-04-27T15:30:00",
-    "durationPlayedSeconds": 210,
-    "completed": true,
-    "source": "home"
-  }
-}
-```
-
----
+> **Lưu ý:** `play_count` của bài hát và lịch sử nghe được ghi tự động khi client gọi `GET /api/songs/{id}/stream` (chunk đầu tiên, `Range: bytes=0-...`). Không cần gọi API riêng để ghi lịch sử.
 
 ### GET `/api/play-history`
 
@@ -1172,8 +1152,6 @@ Lấy lịch sử nghe nhạc của user đang đăng nhập, sắp xếp theo t
           "audioUrl": "https://..."
         },
         "playedAt": "2026-04-27T15:30:00",
-        "durationPlayedSeconds": 210,
-        "completed": true,
         "source": "home"
       }
     ],

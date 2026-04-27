@@ -16,7 +16,6 @@ public class PlayHistoryResponse {
     private Long id;
     private PlayHistorySongInfo song;
     private LocalDateTime playedAt;
-    private Integer durationPlayedSeconds;
-    private Boolean completed;
+
     private String source;
 }

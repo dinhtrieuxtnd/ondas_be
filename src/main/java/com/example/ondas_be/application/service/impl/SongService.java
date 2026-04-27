@@ -21,13 +21,16 @@ import com.example.ondas_be.application.service.port.StoragePort;
 import com.example.ondas_be.application.util.SlugUtil;
 import com.example.ondas_be.domain.entity.Artist;
 import com.example.ondas_be.domain.entity.Genre;
+import com.example.ondas_be.domain.entity.PlayHistory;
 import com.example.ondas_be.domain.entity.Song;
 import com.example.ondas_be.domain.repoport.AlbumRepoPort;
 import com.example.ondas_be.domain.repoport.ArtistRepoPort;
 import com.example.ondas_be.domain.repoport.GenreRepoPort;
+import com.example.ondas_be.domain.repoport.PlayHistoryRepoPort;
 import com.example.ondas_be.domain.repoport.SongArtistRepoPort;
 import com.example.ondas_be.domain.repoport.SongGenreRepoPort;
 import com.example.ondas_be.domain.repoport.SongRepoPort;
+import com.example.ondas_be.domain.repoport.UserRepoPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jaudiotagger.audio.AudioFile;
@@ -58,6 +61,8 @@ public class SongService implements SongServicePort {
     private final GenreRepoPort genreRepoPort;
     private final SongArtistRepoPort songArtistRepoPort;
     private final SongGenreRepoPort songGenreRepoPort;
+    private final PlayHistoryRepoPort playHistoryRepoPort;
+    private final UserRepoPort userRepoPort;
     private final StoragePort storagePort;
     private final SongMapper songMapper;
     private final ArtistMapper artistMapper;
@@ -416,7 +421,7 @@ public class SongService implements SongServicePort {
 
     @Override
     @Transactional
-    public SongStreamResponse streamSong(UUID id, String rangeHeader) {
+    public SongStreamResponse streamSong(UUID id, String rangeHeader, String email, String source) {
         log.info("Streaming song with id: {}, range: {}", id, rangeHeader);
         Song song = songRepoPort.findById(id)
                 .orElseThrow(() -> new SongNotFoundException("Song not found with id: " + id));
@@ -431,6 +436,7 @@ public class SongService implements SongServicePort {
 
         // Khi không biết tổng kích thước, không hỗ trợ Range — trả về full stream
         if (totalSize <= 0) {
+            recordFirstPlay(email, song, source);
             return new SongStreamResponse(
                     storagePort.getObjectStream(audioBucket, objectName, 0, -1),
                     -1, 0, -1, contentType, false
@@ -461,10 +467,24 @@ public class SongService implements SongServicePort {
         }
 
         long length = rangeEnd - rangeStart + 1;
+
+        // Ghi history và tăng play count chỉ ở chunk đầu tiên
+        if (rangeStart == 0) {
+            recordFirstPlay(email, song, source);
+        }
+
         return new SongStreamResponse(
                 storagePort.getObjectStream(audioBucket, objectName, rangeStart, length),
                 totalSize, rangeStart, rangeEnd, contentType, isPartial
         );
+    }
+
+    private void recordFirstPlay(String email, Song song, String source) {
+        userRepoPort.findByEmail(email).ifPresent(user -> {
+            PlayHistory history = new PlayHistory(null, user.getId(), song.getId(), null, source);
+            playHistoryRepoPort.save(history);
+            songRepoPort.incrementPlayCount(song.getId());
+        });
     }
 
     private String resolveContentType(String audioFormat) {

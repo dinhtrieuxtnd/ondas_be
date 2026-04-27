@@ -1,10 +1,8 @@
 package com.example.ondas_be.unit.service;
 
 import com.example.ondas_be.application.dto.common.PageResultDto;
-import com.example.ondas_be.application.dto.request.RecordPlayRequest;
 import com.example.ondas_be.application.dto.response.PlayHistoryResponse;
 import com.example.ondas_be.application.exception.PlayHistoryNotFoundException;
-import com.example.ondas_be.application.exception.SongNotFoundException;
 import com.example.ondas_be.application.exception.UserNotFoundException;
 import com.example.ondas_be.application.service.impl.PlayHistoryService;
 import com.example.ondas_be.domain.entity.PlayHistory;
@@ -65,54 +63,7 @@ class PlayHistoryServiceTest {
     }
 
     private PlayHistory buildSavedHistory(Long id) {
-        return new PlayHistory(id, USER_ID, SONG_ID, LocalDateTime.now(), 180, true, "home");
-    }
-
-    // ── recordPlay ─────────────────────────────────────────────────────────────
-
-    @Test
-    void recordPlay_WhenValid_ShouldReturnResponse() {
-        RecordPlayRequest request = new RecordPlayRequest();
-        request.setSongId(SONG_ID);
-        request.setDurationPlayedSeconds(180);
-        request.setCompleted(true);
-        request.setSource("home");
-
-        when(userRepoPort.findByEmail(EMAIL)).thenReturn(Optional.of(buildUser()));
-        when(songRepoPort.findById(SONG_ID)).thenReturn(Optional.of(buildSong()));
-        when(playHistoryRepoPort.save(any())).thenReturn(buildSavedHistory(1L));
-
-        PlayHistoryResponse response = playHistoryService.recordPlay(EMAIL, request);
-
-        assertNotNull(response);
-        assertEquals(1L, response.getId());
-        assertNotNull(response.getSong());
-        assertEquals(SONG_ID, response.getSong().getId());
-        assertEquals("home", response.getSource());
-        verify(playHistoryRepoPort).save(any());
-    }
-
-    @Test
-    void recordPlay_WhenUserNotFound_ShouldThrowUserNotFoundException() {
-        RecordPlayRequest request = new RecordPlayRequest();
-        request.setSongId(SONG_ID);
-
-        when(userRepoPort.findByEmail(EMAIL)).thenReturn(Optional.empty());
-
-        assertThrows(UserNotFoundException.class, () -> playHistoryService.recordPlay(EMAIL, request));
-        verify(playHistoryRepoPort, never()).save(any());
-    }
-
-    @Test
-    void recordPlay_WhenSongNotFound_ShouldThrowSongNotFoundException() {
-        RecordPlayRequest request = new RecordPlayRequest();
-        request.setSongId(SONG_ID);
-
-        when(userRepoPort.findByEmail(EMAIL)).thenReturn(Optional.of(buildUser()));
-        when(songRepoPort.findById(SONG_ID)).thenReturn(Optional.empty());
-
-        assertThrows(SongNotFoundException.class, () -> playHistoryService.recordPlay(EMAIL, request));
-        verify(playHistoryRepoPort, never()).save(any());
+        return new PlayHistory(id, USER_ID, SONG_ID, LocalDateTime.now(), "home");
     }
 
     // ── getMyHistory ────────────────────────────────────────────────────────────

@@ -2,20 +2,15 @@ package com.example.ondas_be.presentation.controller;
 
 import com.example.ondas_be.application.dto.common.ApiResponse;
 import com.example.ondas_be.application.dto.common.PageResultDto;
-import com.example.ondas_be.application.dto.request.RecordPlayRequest;
 import com.example.ondas_be.application.dto.response.PlayHistoryResponse;
 import com.example.ondas_be.application.service.port.PlayHistoryServicePort;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,14 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlayHistoryController {
 
     private final PlayHistoryServicePort playHistoryServicePort;
-
-    @PostMapping
-    public ResponseEntity<ApiResponse<PlayHistoryResponse>> recordPlay(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody RecordPlayRequest request) {
-        PlayHistoryResponse response = playHistoryServicePort.recordPlay(userDetails.getUsername(), request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
-    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResultDto<PlayHistoryResponse>>> getMyHistory(

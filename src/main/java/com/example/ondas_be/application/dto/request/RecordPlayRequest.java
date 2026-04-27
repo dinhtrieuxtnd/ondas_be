@@ -12,10 +12,6 @@ public class RecordPlayRequest {
     @NotNull(message = "Song ID is required")
     private UUID songId;
 
-    private Integer durationPlayedSeconds;
-
-    private Boolean completed;
-
     @Pattern(
             regexp = "^(search|album|playlist|home|artist|favorites|history)$",
             message = "source must be one of: search, album, playlist, home, artist, favorites, history"

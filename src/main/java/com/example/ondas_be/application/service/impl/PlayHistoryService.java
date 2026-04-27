@@ -1,11 +1,9 @@
 package com.example.ondas_be.application.service.impl;
 
 import com.example.ondas_be.application.dto.common.PageResultDto;
-import com.example.ondas_be.application.dto.request.RecordPlayRequest;
 import com.example.ondas_be.application.dto.response.PlayHistoryResponse;
 import com.example.ondas_be.application.dto.response.PlayHistorySongInfo;
 import com.example.ondas_be.application.exception.PlayHistoryNotFoundException;
-import com.example.ondas_be.application.exception.SongNotFoundException;
 import com.example.ondas_be.application.exception.UserNotFoundException;
 import com.example.ondas_be.application.service.port.PlayHistoryServicePort;
 import com.example.ondas_be.domain.entity.PlayHistory;
@@ -31,30 +29,6 @@ public class PlayHistoryService implements PlayHistoryServicePort {
     private final PlayHistoryRepoPort playHistoryRepoPort;
     private final SongRepoPort songRepoPort;
     private final UserRepoPort userRepoPort;
-
-    @Override
-    @Transactional
-    public PlayHistoryResponse recordPlay(String email, RecordPlayRequest request) {
-        User user = resolveUser(email);
-
-        Song song = songRepoPort.findById(request.getSongId())
-                .orElseThrow(() -> new SongNotFoundException("Song not found with id: " + request.getSongId()));
-
-        PlayHistory playHistory = new PlayHistory(
-                null,
-                user.getId(),
-                song.getId(),
-                null, // set by @PrePersist
-                request.getDurationPlayedSeconds(),
-                request.getCompleted() != null ? request.getCompleted() : false,
-                request.getSource()
-        );
-
-        PlayHistory saved = playHistoryRepoPort.save(playHistory);
-        // Tăng play_count khi ghi nhận lượt nghe thành công
-        songRepoPort.incrementPlayCount(song.getId());
-        return toResponse(saved, toSongInfo(song));
-    }
 
     @Override
     public PageResultDto<PlayHistoryResponse> getMyHistory(String email, int page, int size) {
@@ -128,8 +102,6 @@ public class PlayHistoryService implements PlayHistoryServicePort {
                 .id(entry.getId())
                 .song(songInfo)
                 .playedAt(entry.getPlayedAt())
-                .durationPlayedSeconds(entry.getDurationPlayedSeconds())
-                .completed(entry.getCompleted())
                 .source(entry.getSource())
                 .build();
     }

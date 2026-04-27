@@ -37,13 +37,6 @@ public class PlayHistoryModel {
     @Column(name = "played_at", nullable = false, updatable = false)
     private LocalDateTime playedAt;
 
-    @Column(name = "duration_played_seconds")
-    private Integer durationPlayedSeconds;
-
-    @Column(name = "completed", nullable = false)
-    @Builder.Default
-    private Boolean completed = false;
-
     @Column(name = "source", length = 30)
     private String source;
 
@@ -52,13 +45,10 @@ public class PlayHistoryModel {
         if (this.playedAt == null) {
             this.playedAt = LocalDateTime.now();
         }
-        if (this.completed == null) {
-            this.completed = false;
-        }
     }
 
     public PlayHistory toDomain() {
-        return new PlayHistory(id, userId, songId, playedAt, durationPlayedSeconds, completed, source);
+        return new PlayHistory(id, userId, songId, playedAt, source);
     }
 
     public static PlayHistoryModel fromDomain(PlayHistory playHistory) {
@@ -67,8 +57,6 @@ public class PlayHistoryModel {
                 .userId(playHistory.getUserId())
                 .songId(playHistory.getSongId())
                 .playedAt(playHistory.getPlayedAt())
-                .durationPlayedSeconds(playHistory.getDurationPlayedSeconds())
-                .completed(playHistory.getCompleted())
                 .source(playHistory.getSource())
                 .build();
     }
