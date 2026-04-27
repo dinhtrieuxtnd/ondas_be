@@ -4,6 +4,7 @@ import com.example.ondas_be.application.dto.request.CreateAlbumRequest;
 import com.example.ondas_be.application.dto.response.AlbumResponse;
 import com.example.ondas_be.application.dto.response.SongSummaryResponse;
 import com.example.ondas_be.application.mapper.AlbumMapper;
+import com.example.ondas_be.application.mapper.ArtistMapper;
 import com.example.ondas_be.application.mapper.SongMapper;
 import com.example.ondas_be.application.service.impl.AlbumService;
 import com.example.ondas_be.application.service.port.StoragePort;
@@ -53,6 +54,9 @@ class AlbumServiceTest {
 
     @Mock
     private AlbumMapper albumMapper;
+
+    @Mock
+    private ArtistMapper artistMapper;
 
     @Mock
     private SongMapper songMapper;

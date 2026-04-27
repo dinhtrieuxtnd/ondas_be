@@ -3,7 +3,6 @@ package com.example.ondas_be.unit.service;
 import com.example.ondas_be.application.dto.common.PageResultDto;
 import com.example.ondas_be.application.dto.response.PlayHistoryResponse;
 import com.example.ondas_be.application.exception.PlayHistoryNotFoundException;
-import com.example.ondas_be.application.exception.UserNotFoundException;
 import com.example.ondas_be.application.service.impl.PlayHistoryService;
 import com.example.ondas_be.domain.entity.PlayHistory;
 import com.example.ondas_be.domain.entity.Role;
